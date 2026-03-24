@@ -52,7 +52,7 @@ It ships four core primitives — **Circuit Breaker**, **Retry**, **Bulkhead**, 
 go get github.com/ChiragRayani/resilix
 ```
 
-Requires **Go 1.21+** (generics).
+Requires **Go 1.25+** (generics).
 
 ---
 
