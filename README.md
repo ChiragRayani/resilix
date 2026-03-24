@@ -10,6 +10,22 @@ Zero external dependencies in the core library. Optional OpenTelemetry integrati
 
 ---
 
+## What is resilix?
+
+**resilix** is a lightweight Go library that provides battle-tested resilience patterns to protect your services from cascading failures. When an upstream API goes down, a database slows to a crawl, or a third-party service starts timing out — resilix keeps your application responsive and degrading gracefully instead of collapsing.
+
+It ships four core primitives — **Circuit Breaker**, **Retry**, **Bulkhead**, and **Timeout** — that can be used standalone or composed into a **Pipeline** for layered protection. Everything is built with Go generics, giving you full type safety without sacrificing ergonomics.
+
+### Why resilix?
+
+- **No framework lock-in** — resilix is a library, not a framework. Drop it into any Go project.
+- **Generics-first API** — `Execute[T]` and `WithFallback[T]` return typed results directly. No `interface{}` boxing, no type assertions.
+- **Zero core dependencies** — the core library imports only the Go standard library. The OpenTelemetry integration is an optional subpackage (`resilix/otel`).
+- **Production-ready defaults** — `DefaultPipeline("my-service")` gives you a sensible Timeout → Retry → Circuit Breaker chain in a single line.
+- **Fully testable** — inject `FakeClock` to make time-dependent tests instant and deterministic.
+
+---
+
 ## Features
 
 | Primitive | Description |
