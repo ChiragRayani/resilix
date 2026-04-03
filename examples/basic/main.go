@@ -34,21 +34,21 @@ func NewProductClient(baseURL string) *ProductClient {
 	pipeline := resilix.NewPipeline("product-api",
 		resilix.NewTimeout(resilix.TimeoutConfig{
 			Name:     "product-api.timeout",
-			Duration: 3 * time.Second,
+			Duration: 5 * time.Second,
 		}),
 		resilix.NewRetry(resilix.RetryConfig{
 			Name:        "product-api.retry",
 			MaxAttempts: 3,
-			Backoff:     resilix.ExponentialBackoffWithJitter(200*time.Millisecond, 2.0, 5*time.Second, 0.25),
+			Backoff:     resilix.ExponentialBackoffWithJitter(100*time.Millisecond, 2.0, 5*time.Second, 0.25),
 			RetryIf:     isRetryableHTTPError,
 		}),
 		resilix.NewCircuitBreaker(resilix.CBConfig{
 			Name:             "product-api.cb",
-			FailureThreshold: 0.40,
-			MinRequests:      10,
+			FailureThreshold: 0.10,
+			MinRequests:      9,
 			OpenTimeout:      20 * time.Second,
 			HalfOpenMax:      2,
-			Window:           resilix.NewSlidingWindow(60*time.Second, 6),
+			Window:           resilix.NewSlidingWindow(10*time.Second, 6),
 		}),
 		resilix.NewBulkhead(resilix.BulkheadConfig{
 			Name:          "product-api.bulkhead",
@@ -128,15 +128,18 @@ func isRetryableHTTPError(err error, _ int) bool {
 	if errors.As(err, &he) {
 		return he.code >= 500
 	}
-	// retry on network/context errors (but not context.Canceled from the caller)
-	return err != nil && !errors.Is(err, context.Canceled)
+	// Don't retry timeouts or cancellations
+	if errors.Is(err, resilix.ErrTimeout) || errors.Is(err, context.Canceled) {
+		return false
+	}
+	return err != nil
 }
 
 func main() {
 	client := NewProductClient("https://api.example.com")
 	ctx := context.Background()
 
-	for _, id := range []int{1, 2, 3, 4, 5, 6} {
+	for _, id := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10} {
 		p, err := client.GetProduct(ctx, id)
 		if err != nil {
 			log.Printf("error fetching product %d: %v", id, err)

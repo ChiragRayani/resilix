@@ -35,6 +35,7 @@ It ships four core primitives — **Circuit Breaker**, **Retry**, **Bulkhead**, 
 | **Bulkhead** | Limits concurrent calls to protect goroutine pools from slow downstreams |
 | **Timeout** | Cancels calls exceeding a deadline with no goroutine leaks |
 | **Pipeline** | Chains primitives in order; generic `Execute[T]` for fully type-safe results |
+| **Registry** | Thread-safe named store for any policy type — get-or-create with factories & hooks |
 
 ### Highlights
 
@@ -132,6 +133,109 @@ Timeout → Retry → CircuitBreaker → Bulkhead
 | | Retry | Re-attempts before hitting the circuit breaker each time |
 | | Circuit Breaker | Short-circuits early when the downstream is known-bad |
 | **Innermost** | Bulkhead | Limits simultaneous in-flight calls to the downstream |
+
+---
+
+## Registry — Named Policy Store
+
+> See [examples/registry/main.go](examples/registry/main.go) for a full runnable demo.
+
+`Registry[T]` is a generic, thread-safe named store that lets you create and reuse policies by name. No need to pass `*CircuitBreaker` instances around — just ask the registry.
+
+### Circuit Breaker Registry
+
+```go
+cbRegistry := resilix.NewRegistry(
+    resilix.WithDefaultFactory(func(name string) *resilix.CircuitBreaker {
+        return resilix.NewCircuitBreaker(resilix.CBConfig{
+            Name:             name,
+            FailureThreshold: 0.5,
+            MinRequests:      5,
+            OpenTimeout:      30 * time.Second,
+        })
+    }),
+)
+
+// First call creates; subsequent calls return the same instance.
+cb := cbRegistry.GetOrCreate("payments-api")
+```
+
+### Retry Registry
+
+```go
+retryRegistry := resilix.NewRegistry(
+    resilix.WithDefaultFactory(func(name string) *resilix.Retry {
+        return resilix.NewRetry(resilix.RetryConfig{
+            Name:        name,
+            MaxAttempts: 3,
+            Backoff:     resilix.ExponentialBackoffWithJitter(100*time.Millisecond, 2.0, 10*time.Second, 0.2),
+        })
+    }),
+)
+
+r := retryRegistry.GetOrCreate("db-query")
+```
+
+### Bulkhead & Timeout Registries
+
+```go
+bhRegistry := resilix.NewRegistry(
+    resilix.WithDefaultFactory(func(name string) *resilix.Bulkhead {
+        return resilix.NewBulkhead(resilix.BulkheadConfig{
+            Name:          name,
+            MaxConcurrent: 20,
+        })
+    }),
+)
+
+toRegistry := resilix.NewRegistry(
+    resilix.WithDefaultFactory(func(name string) *resilix.Timeout {
+        return resilix.NewTimeout(resilix.TimeoutConfig{
+            Name:     name,
+            Duration: 5 * time.Second,
+        })
+    }),
+)
+```
+
+### Pipeline Registry
+
+```go
+pipelineRegistry := resilix.NewRegistry(
+    resilix.WithDefaultFactory(func(name string) *resilix.Pipeline {
+        return resilix.DefaultPipeline(name)
+    }),
+)
+
+pipeline := pipelineRegistry.GetOrCreate("user-service")
+```
+
+### Manual Registration & Hooks
+
+```go
+// Pre-build and register a custom policy
+reg := resilix.NewRegistry(
+    resilix.WithOnCreate(func(name string, cb *resilix.CircuitBreaker) {
+        log.Printf("created circuit breaker: %s", name)
+    }),
+)
+
+// Register a hand-built instance (returns false if name is taken)
+reg.Register("auth-service", resilix.NewCircuitBreaker(resilix.CBConfig{
+    Name:             "auth-service",
+    FailureThreshold: 0.3,
+    OpenTimeout:      60 * time.Second,
+}))
+
+// Lookup
+cb, ok := reg.Get("auth-service")
+
+// Snapshot of all entries
+all := reg.All()
+
+// Remove
+reg.Remove("auth-service")
+```
 
 ---
 
@@ -366,14 +470,17 @@ resilix/
 ├── bulkhead.go           # Semaphore-based concurrency limiter
 ├── timeout.go            # Context-based timeout with goroutine leak prevention
 ├── pipeline.go           # Pipeline, generic Execute[T], WithFallback[T], DefaultPipeline
+├── registry.go           # Generic thread-safe Registry[T] for named policy management
 ├── window.go             # CountWindow, SlidingWindow, AtomicCounter
 ├── otel/
 │   └── observer.go       # OpenTelemetry Observer implementation
 ├── testutil/
 │   ├── fake_clock.go     # FakeClock for deterministic time control
-│   └── circuit_breaker_test.go  # Comprehensive test suite
+│   ├── circuit_breaker_test.go  # Comprehensive test suite
+│   └── registry_test.go  # Registry tests for all policy types
 ├── examples/
-│   └── basic/main.go     # Real-world HTTP client example
+│   ├── basic/main.go     # Real-world HTTP client example
+│   └── registry/main.go  # Registry usage patterns & global stores
 ├── go.mod
 └── README.md
 ```
