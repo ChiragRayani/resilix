@@ -47,6 +47,30 @@ It ships four core primitives — **Circuit Breaker**, **Retry**, **Bulkhead**, 
 
 ---
 
+## How resilix compares
+
+| Feature | **resilix** | sony/gobreaker | failsafe-go | hystrix-go |
+|---|---|---|---|---|
+| **Generics-first API** | ✅ `Execute[T]` — typed results, no boxing | ❌ `interface{}` | ✅ | ❌ `interface{}` |
+| **Zero core dependencies** | ✅ stdlib only | ✅ stdlib only | ❌ | ❌ |
+| **Circuit Breaker** | ✅ | ✅ | ✅ | ✅ |
+| **Retry** | ✅ pluggable backoff & predicates | ❌ | ✅ | ❌ |
+| **Bulkhead** | ✅ | ❌ | ✅ | ✅ (semaphore) |
+| **Timeout** | ✅ | ❌ | ✅ | ✅ |
+| **Composable Pipeline** | ✅ `DefaultPipeline` one-liner | ❌ | ❌ | ❌ |
+| **Named Registry** | ✅ generic, thread-safe | ❌ | ❌ | ✅ |
+| **OpenTelemetry** | ✅ opt-in subpackage | ❌ | ✅ | ❌ |
+| **Custom Observer** | ✅ plug in any backend | ❌ | ✅ | ✅ (statsd) |
+| **Sliding time window** | ✅ | ❌ count-only | ✅ | ❌ |
+| **FakeClock for testing** | ✅ built-in | ❌ | ❌ | ❌ |
+| **Active maintenance** | ✅ | ⚠️ minimal | ✅ | ❌ archived |
+| **Chaos injection** | 🔜 `WithChaos()` — delays, errors & timeouts via probability config | ❌ | ❌ | ❌ |
+| **Deadline propagation** | 🔜 `BudgetedTimeout` — caps child timeouts to parent context remainder | ❌ | ❌ | ❌ |
+
+> hystrix-go is no longer maintained. sony/gobreaker covers circuit breaking only. failsafe-go is the closest alternative — resilix differentiates with its Pipeline abstraction, named Registry, built-in FakeClock, and zero core dependencies.
+
+---
+
 ## Installation
 
 ```bash
