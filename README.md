@@ -67,8 +67,6 @@ It ships four core primitives — **Circuit Breaker**, **Retry**, **Bulkhead**, 
 | **Chaos injection** | 🔜 `WithChaos()` — delays, errors & timeouts via probability config | ❌ | ❌ | ❌ |
 | **Deadline propagation** | 🔜 `BudgetedTimeout` — caps child timeouts to parent context remainder | ❌ | ❌ | ❌ |
 
-> hystrix-go is no longer maintained. sony/gobreaker covers circuit breaking only. failsafe-go is the closest alternative — resilix differentiates with its Pipeline abstraction, named Registry, built-in FakeClock, and zero core dependencies.
-
 ---
 
 ## Installation
